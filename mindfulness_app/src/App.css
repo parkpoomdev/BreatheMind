@@ -164,6 +164,170 @@ body[data-theme="light"] {
   transform: scale(0.97);
 }
 
+.menu-config {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  margin-top: 4px;
+}
+
+.menu-config__header {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.menu-config__title {
+  font-size: 0.75rem;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  opacity: 0.7;
+}
+
+.menu-config__name {
+  font-size: 1.05rem;
+  font-weight: 600;
+}
+
+.menu-config__patterns {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.menu-config__patterns > div {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.menu-config__pattern-label {
+  font-size: 0.7rem;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  opacity: 0.65;
+}
+
+.menu-config__pattern-value {
+  font-size: 0.95rem;
+  font-weight: 600;
+}
+
+.menu-config__fields {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.menu-config__row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  font-size: 0.95rem;
+}
+
+.menu-config__row input {
+  width: 90px;
+  border-radius: 12px;
+  padding: 6px 10px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  text-align: right;
+  border: 1px solid rgba(148, 163, 184, 0.35);
+  background: rgba(15, 23, 42, 0.55);
+  color: #f8fafc;
+}
+
+.menu-config__row input:focus {
+  outline: none;
+  border-color: rgba(94, 234, 212, 0.65);
+  box-shadow: 0 0 0 2px rgba(94, 234, 212, 0.2);
+}
+
+.menu-content.light .menu-config__row input {
+  background: rgba(248, 250, 252, 0.95);
+  border: 1px solid rgba(148, 163, 184, 0.45);
+  color: #0f172a;
+}
+
+.menu-content.light .menu-config__row input:focus {
+  border-color: rgba(14, 165, 233, 0.6);
+  box-shadow: 0 0 0 2px rgba(14, 165, 233, 0.18);
+}
+
+.menu-config__actions {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.menu-config__actions ion-button {
+  --border-radius: 14px;
+  --padding-top: 10px;
+  --padding-bottom: 10px;
+}
+
+.config-modal {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.config-modal__empty {
+  font-size: 0.9rem;
+  opacity: 0.7;
+  text-align: center;
+}
+
+.config-select {
+  --background: transparent;
+  --highlight-height: 0;
+  --padding-start: 0;
+  --padding-end: 0;
+  --inner-padding-end: 0;
+}
+
+.config-select ion-select {
+  border-radius: 18px;
+  border: 1px solid rgba(148, 163, 184, 0.25);
+  padding: 10px 16px;
+  font-size: 0.95rem;
+  background: rgba(15, 23, 42, 0.65);
+  color: #f8fafc;
+}
+
+.config-select ion-select::part(icon) {
+  opacity: 0.6;
+}
+
+.config-select ion-select::part(label) {
+  font-size: 0.9rem;
+  color: rgba(226, 232, 240, 0.85);
+  margin-bottom: 6px;
+}
+
+body[data-theme="light"] .config-select ion-select {
+  background: rgba(248, 250, 252, 0.92);
+  border: 1px solid rgba(148, 163, 184, 0.35);
+  color: #0f172a;
+}
+
+body[data-theme="light"] .config-select ion-select::part(label) {
+  color: rgba(15, 23, 42, 0.75);
+}
+
+body[data-theme="light"] .menu-config__row input {
+  background: rgba(248, 250, 252, 0.95);
+  border: 1px solid rgba(148, 163, 184, 0.45);
+  color: #0f172a;
+}
+
+body[data-theme="light"] .menu-config__row input:focus {
+  border-color: rgba(14, 165, 233, 0.6);
+  box-shadow: 0 0 0 2px rgba(14, 165, 233, 0.18);
+}
+
 .session-wrapper {
   flex: 1;
   max-width: 420px;
@@ -488,23 +652,14 @@ body[data-theme="light"] {
 
 @media (max-width: 560px) {
   .app-shell {
-    flex-direction: column;
     gap: 12px;
-    padding: 12px;
-  }
-
-  .session-topbar {
-    justify-content: center;
-  }
-
-  .menu-toggle {
-    width: 100%;
-    justify-content: center;
+    padding: 16px 12px;
   }
 
   .menu-shell {
     width: min(94%, 320px);
-    padding: 28px 18px;
+    padding: 26px 18px;
+    margin-top: 10px;
   }
 
   .menu-actions {
@@ -513,6 +668,10 @@ body[data-theme="light"] {
 
   .menu-action {
     width: 100%;
+  }
+
+  .menu-config__row input {
+    width: 76px;
   }
 }
 

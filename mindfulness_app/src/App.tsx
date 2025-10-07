@@ -17,8 +17,7 @@ import {
   IonTitle,
   IonToolbar
 } from "@ionic/react";
-import { menuController } from "@ionic/core";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ProgressRing } from "./components/ProgressRing";
 import { PhaseSegmentsRing } from "./components/PhaseSegmentsRing";
 import { usePhaseAudio } from "./hooks/usePhaseAudio";
@@ -32,7 +31,7 @@ type ModeOption = {
   phases: { label: string; count: number }[];
 };
 
-const MODE_OPTIONS: ModeOption[] = [
+const MODE_PRESETS: ModeOption[] = [
   {
     value: "balanced-448",
     name: "Balanced Calm",
@@ -92,19 +91,47 @@ const formatTime = (totalSeconds: number): string => {
 
 const clamp = (value: number, min = 0, max = 1) => Math.max(min, Math.min(max, value));
 
+const formatRatioValue = (value: number): string => {
+  if (!Number.isFinite(value)) return "0";
+  const rounded = Math.round(value * 100) / 100;
+  return Number.isInteger(rounded) ? `${Math.trunc(rounded)}` : `${rounded}`;
+};
+
 export default function App() {
-  const [mode, setMode] = useState<string>(MODE_OPTIONS[0]?.value ?? "balanced-448");
+  const [mode, setMode] = useState<string>(MODE_PRESETS[0]?.value ?? "balanced-448");
   const [minutes, setMinutes] = useState<number>(PRESET_TIMES[0]);
   const [isRunning, setIsRunning] = useState<boolean>(false);
   const [timeLeft, setTimeLeft] = useState<number>(minutes * 60);
-  const [guide, setGuide] = useState<ModeOption | null>(null);
   const [showGuide, setShowGuide] = useState<boolean>(false);
   const [theme, setTheme] = useState<"light" | "dark">("dark");
+  const [customModes, setCustomModes] = useState<Record<string, number[]>>({});
+  const [showConfigModal, setShowConfigModal] = useState(false);
+  const [configMode, setConfigMode] = useState<string>(MODE_PRESETS[0].value);
+  const [configEditRatios, setConfigEditRatios] = useState<string[]>([]);
   const initialMountRef = useRef(true);
   const { playPhaseTone, resetAudio } = usePhaseAudio();
   const phaseIndexRef = useRef<number | null>(null);
 
   const previousMinutesRef = useRef(minutes);
+
+  const getRatiosForMode = useCallback(
+    (modeValue: string): number[] => {
+      const preset = MODE_PRESETS.find((option) => option.value === modeValue);
+      if (!preset) {
+        return [];
+      }
+      const baseRatios = preset.ratios;
+      const custom = customModes[modeValue];
+      if (!custom || custom.length !== baseRatios.length) {
+        return [...baseRatios];
+      }
+      return baseRatios.map((value, idx) => {
+        const parsed = Number(custom[idx]);
+        return Number.isFinite(parsed) && parsed > 0 ? parsed : value;
+      });
+    },
+    [customModes]
+  );
 
   useEffect(() => {
     if (!isRunning && previousMinutesRef.current !== minutes) {
@@ -135,9 +162,144 @@ export default function App() {
   const totalSeconds = useMemo(() => Math.max(1, minutes * 60), [minutes]);
   const progress = useMemo(() => clamp(1 - timeLeft / totalSeconds), [timeLeft, totalSeconds]);
 
-  const activeMode = MODE_OPTIONS.find((option) => option.value === mode);
-  const activePattern = activeMode?.pattern ?? "";
-  const phaseRatios = activeMode?.ratios ?? [];
+  const baseMode = useMemo(
+    () => MODE_PRESETS.find((option) => option.value === mode) ?? null,
+    [mode]
+  );
+
+  const currentRatios = useMemo(
+    () => getRatiosForMode(mode),
+    [getRatiosForMode, mode]
+  );
+
+  const currentPhases = useMemo(() => {
+    if (!baseMode) {
+      return [];
+    }
+    return baseMode.phases.map((phase, idx) => ({
+      ...phase,
+      count: currentRatios[idx] ?? phase.count
+    }));
+  }, [baseMode, currentRatios]);
+
+  const activePattern = useMemo(() => {
+    if (!currentRatios.length) {
+      return "";
+    }
+    return currentRatios.map(formatRatioValue).join("-");
+  }, [currentRatios]);
+
+  const phaseRatios = currentRatios;
+
+  const guideData = useMemo(() => {
+    if (!baseMode) {
+      return null;
+    }
+    return {
+      name: baseMode.name,
+      pattern: activePattern || baseMode.pattern,
+      phases: currentPhases
+    };
+  }, [activePattern, baseMode, currentPhases]);
+
+  const configBaseMode = useMemo(
+    () => MODE_PRESETS.find((option) => option.value === configMode) ?? null,
+    [configMode]
+  );
+
+  const configSavedPattern = useMemo(() => {
+    if (!configBaseMode) {
+      return "";
+    }
+    const ratios = getRatiosForMode(configBaseMode.value);
+    if (!ratios.length) {
+      return configBaseMode.pattern;
+    }
+    return ratios.map(formatRatioValue).join("-");
+  }, [configBaseMode, getRatiosForMode]);
+
+  const configPreviewPattern = useMemo(() => {
+    if (!configBaseMode) {
+      return "";
+    }
+    if (!configEditRatios.length) {
+      return configSavedPattern;
+    }
+    return configBaseMode.ratios
+      .map((value, idx) => {
+        const parsed = parseFloat(configEditRatios[idx]);
+        return Number.isFinite(parsed) && parsed > 0 ? formatRatioValue(parsed) : formatRatioValue(value);
+      })
+      .join("-");
+  }, [configBaseMode, configEditRatios, configSavedPattern]);
+
+  useEffect(() => {
+    if (!showConfigModal) {
+      return;
+    }
+    if (!configBaseMode) {
+      return;
+    }
+    const ratios = getRatiosForMode(configBaseMode.value);
+    setConfigEditRatios(ratios.map(formatRatioValue));
+  }, [showConfigModal, configBaseMode, getRatiosForMode]);
+
+  const applyCustomPattern = useCallback((modeValue: string, ratioStrings: string[]): number[] => {
+    const preset = MODE_PRESETS.find((option) => option.value === modeValue);
+    if (!preset) {
+      return [];
+    }
+    const sanitized = preset.ratios.map((value, idx) => {
+      const parsed = parseFloat(ratioStrings[idx] ?? "");
+      if (Number.isFinite(parsed) && parsed > 0) {
+        return Math.round(parsed * 100) / 100;
+      }
+      return value;
+    });
+    const matchesDefault = sanitized.every((value, idx) => value === preset.ratios[idx]);
+    setCustomModes((prev) => {
+      if (matchesDefault) {
+        if (!(modeValue in prev)) {
+          return prev;
+        }
+        const next = { ...prev };
+        delete next[modeValue];
+        return next;
+      }
+      return {
+        ...prev,
+        [modeValue]: sanitized
+      };
+    });
+    return sanitized;
+  }, [setCustomModes]);
+
+  const getPatternLabel = useCallback(
+    (preset: ModeOption): string => {
+      const ratios = getRatiosForMode(preset.value);
+      if (!ratios.length) {
+        return preset.pattern;
+      }
+      return ratios.map(formatRatioValue).join("-");
+    },
+    [getRatiosForMode]
+  );
+
+  const openConfigModal = useCallback(
+    (targetMode?: string) => {
+      const fallback = targetMode ?? mode;
+      const preset = MODE_PRESETS.find((option) => option.value === fallback) ?? MODE_PRESETS[0];
+      if (!preset) {
+        return;
+      }
+      setConfigMode(preset.value);
+      const ratios = getRatiosForMode(preset.value);
+      setConfigEditRatios(ratios.map(formatRatioValue));
+      setShowConfigModal(true);
+    },
+    [getRatiosForMode, mode]
+  );
+
   const statusText = isRunning ? "In Session" : timeLeft === minutes * 60 ? "Ready" : "Paused";
 
   const cycleUnitTotal = useMemo(
@@ -164,6 +326,33 @@ export default function App() {
     setMinutes((current) => clamp(current + 5, 5, MAX_MINUTES));
   };
 
+  const handleConfigRatioChange = (index: number, value: string) => {
+    setConfigEditRatios((prev) => {
+      const next = [...prev];
+      next[index] = value;
+      return next;
+    });
+  };
+
+  const saveCustomRatios = () => {
+    if (!configBaseMode) {
+      return;
+    }
+    const sanitized = applyCustomPattern(configBaseMode.value, configEditRatios);
+    if (sanitized.length) {
+      setConfigEditRatios(sanitized.map(formatRatioValue));
+    }
+  };
+
+  const resetRatiosToDefault = () => {
+    if (!configBaseMode) {
+      return;
+    }
+    const defaults = configBaseMode.ratios.map(formatRatioValue);
+    applyCustomPattern(configBaseMode.value, defaults);
+    setConfigEditRatios(defaults);
+  };
+
   const handleReset = () => {
     setIsRunning(false);
     setTimeLeft(minutes * 60);
@@ -184,12 +373,10 @@ export default function App() {
       initialMountRef.current = false;
       return;
     }
-    const selected = MODE_OPTIONS.find((option) => option.value === mode) ?? null;
-    if (selected) {
-      setGuide(selected);
+    if (baseMode) {
       setShowGuide(true);
     }
-  }, [mode]);
+  }, [baseMode, mode]);
 
   useEffect(() => {
     phaseIndexRef.current = null;
@@ -231,9 +418,6 @@ export default function App() {
   const themeIcon = theme === "dark" ? sunnyOutline : moonOutline;
   const themeLabel = theme === "dark" ? "Light mode" : "Dark mode";
   const toggleTheme = () => setTheme((prev) => (prev === "dark" ? "light" : "dark"));
-  const openConfigMenu = () => {
-    menuController.open("config-menu").catch(() => {});
-  };
 
   return (
     <IonApp>
@@ -254,15 +438,97 @@ export default function App() {
                   <span>{themeLabel}</span>
                 </button>
                 <IonMenuToggle autoHide>
-                  <button type="button" className="menu-action secondary">
+                  <button type="button" className="menu-action secondary" onClick={() => openConfigModal(mode)}>
                     <IonIcon icon={settingsOutline} className="menu-action__icon" />
-                    <span>Session configuration</span>
+                    <span>Configure patterns</span>
                   </button>
                 </IonMenuToggle>
               </div>
             </div>
           </IonContent>
         </IonMenu>
+
+        <IonModal isOpen={showConfigModal} onDidDismiss={() => setShowConfigModal(false)}>
+          <IonHeader translucent>
+            <IonToolbar>
+              <IonTitle>Pattern Configuration</IonTitle>
+              <IonButtons slot="end">
+                <IonButton onClick={() => setShowConfigModal(false)}>Close</IonButton>
+              </IonButtons>
+            </IonToolbar>
+          </IonHeader>
+          <IonContent className="ion-padding">
+            {configBaseMode ? (
+              <div className="config-modal">
+                <IonItem lines="none" className="config-select">
+                  <IonSelect
+                    label="Select pattern"
+                    labelPlacement="stacked"
+                    value={configMode}
+                    interface="popover"
+                    onIonChange={(event) => {
+                      const value = event.detail.value as string | undefined;
+                      if (value) {
+                        setConfigMode(value);
+                      }
+                    }}
+                  >
+                    {MODE_PRESETS.map((option) => {
+                      const patternLabel = getPatternLabel(option);
+                      return (
+                        <IonSelectOption key={option.value} value={option.value}>
+                          {`${option.name} (${patternLabel})`}
+                        </IonSelectOption>
+                      );
+                    })}
+                  </IonSelect>
+                </IonItem>
+
+                <div className="menu-config">
+                  <div className="menu-config__header">
+                    <span className="menu-config__title">Customize pattern</span>
+                    <span className="menu-config__name">{configBaseMode.name}</span>
+                    <div className="menu-config__patterns">
+                      <div>
+                        <span className="menu-config__pattern-label">Saved</span>
+                        <span className="menu-config__pattern-value">{configSavedPattern}</span>
+                      </div>
+                      <div>
+                        <span className="menu-config__pattern-label">Preview</span>
+                        <span className="menu-config__pattern-value">{configPreviewPattern}</span>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="menu-config__fields">
+                    {configBaseMode.phases.map((phase, index) => (
+                      <label key={`${configBaseMode.value}-${phase.label}-${index}`} className="menu-config__row">
+                        <span>{phase.label}</span>
+                        <input
+                          type="number"
+                          inputMode="decimal"
+                          step="0.1"
+                          min="0.1"
+                          value={configEditRatios[index] ?? ""}
+                          onChange={(event) => handleConfigRatioChange(index, event.target.value)}
+                        />
+                      </label>
+                    ))}
+                  </div>
+                  <div className="menu-config__actions">
+                    <IonButton expand="block" fill="clear" onClick={resetRatiosToDefault}>
+                      Use defaults
+                    </IonButton>
+                    <IonButton expand="block" onClick={saveCustomRatios}>
+                      Save pattern
+                    </IonButton>
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <div className="config-modal__empty">No pattern found.</div>
+            )}
+          </IonContent>
+        </IonModal>
 
         <IonContent id="main-content" fullscreen className={`app-content ${theme}`}>
           <div className="app-shell">
@@ -282,11 +548,14 @@ export default function App() {
                         }
                       }}
                     >
-                      {MODE_OPTIONS.map((option) => (
-                        <IonSelectOption key={option.value} value={option.value}>
-                          {`${option.name} (${option.pattern})`}
-                        </IonSelectOption>
-                      ))}
+                      {MODE_PRESETS.map((option) => {
+                        const patternString = getPatternLabel(option);
+                        return (
+                          <IonSelectOption key={option.value} value={option.value}>
+                            {`${option.name} (${patternString})`}
+                          </IonSelectOption>
+                        );
+                      })}
                     </IonSelect>
                   </IonItem>
 
@@ -343,23 +612,23 @@ export default function App() {
         <IonModal isOpen={showGuide} onDidDismiss={() => setShowGuide(false)}>
           <IonHeader translucent>
             <IonToolbar>
-              <IonTitle>{guide ? `${guide.name} (${guide.pattern})` : "Breathwork Guide"}</IonTitle>
+              <IonTitle>{guideData ? `${guideData.name} (${guideData.pattern})` : "Breathwork Guide"}</IonTitle>
               <IonButtons slot="end">
                 <IonButton onClick={() => setShowGuide(false)}>Close</IonButton>
               </IonButtons>
             </IonToolbar>
           </IonHeader>
           <IonContent className="ion-padding">
-            {guide ? (
+            {guideData ? (
               <div className="guide-content">
                 <p className="guide-summary">
-                  1 cycle = {guide.pattern.split("-").join(" + ")} counts. Follow each phase in order:
+                  1 cycle = {guideData.pattern.split("-").join(" + ")} counts. Follow each phase in order:
                 </p>
                 <ul className="guide-phase-list">
-                  {guide.phases.map((phase, index) => (
+                  {guideData.phases.map((phase, index) => (
                     <li key={`${phase.label}-${index}`}>
                       <span className="guide-phase-label">{phase.label}</span>
-                      <span className="guide-phase-count">{phase.count} counts</span>
+                      <span className="guide-phase-count">{formatRatioValue(phase.count)} counts</span>
                     </li>
                   ))}
                 </ul>

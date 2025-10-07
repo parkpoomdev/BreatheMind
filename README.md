@@ -1,5 +1,8 @@
 # 🌬️ BreatheMind — Mindful Breathwork & Meditation App
 
+<img width="846" height="703" alt="image" src="https://github.com/user-attachments/assets/564613b6-a729-4126-ac13-c5228f25423f" />
+
+
 BreatheMind is a modern mindfulness app designed to help users calm their mind, balance their energy, and improve focus through scientifically proven breathing techniques.  
 Built with an elegant UI and smooth animations, it guides users through various breathwork patterns that support relaxation, stress reduction, and mental clarity.
 

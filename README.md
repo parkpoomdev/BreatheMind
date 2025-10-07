@@ -3,9 +3,6 @@
 BreatheMind is a modern mindfulness app designed to help users calm their mind, balance their energy, and improve focus through scientifically proven breathing techniques.  
 Built with an elegant UI and smooth animations, it guides users through various breathwork patterns that support relaxation, stress reduction, and mental clarity.
 
-<img width="342" height="681" alt="image" src="https://github.com/user-attachments/assets/c7110916-5c1f-4527-a805-c5a213441e6b" />
-<img width="293" height="298" alt="image" src="https://github.com/user-attachments/assets/fe929051-be04-4fa6-bf8f-71503ef479db" />
-
 ---
 
 ## ✨ Features
@@ -32,25 +29,83 @@ Built with an elegant UI and smooth animations, it guides users through various 
 
 Breathwork is one of the simplest yet most effective mindfulness practices.  
 By guiding your breath rhythm, BreatheMind helps you:
-- Reduce anxiety and stress
-- Enhance focus and clarity
-- Improve emotional balance
-- Support better sleep and recovery
+- Reduce anxiety and stress  
+- Enhance focus and clarity  
+- Improve emotional balance  
+- Support better sleep and recovery  
 
 ---
 
 ## 🚀 Tech Stack
 
-- **Frontend:** React / React Native (or Flutter if applicable)
-- **UI:** Custom animations with CSS / Lottie
-- **State Management:** Context API / Redux Toolkit
-- **Deployment:** iOS, Android, and Web (PWA ready)
+- **Frontend:** React / React Native (or Flutter if applicable)  
+- **UI:** Custom animations with CSS / Lottie  
+- **State Management:** Context API / Redux Toolkit  
+- **Deployment:** iOS, Android, and Web (PWA ready)  
 
 ---
 
 ## 🧩 Getting Started
 
-### 1. Clone the repository
-```bash
-git clone https://github.com/yourusername/breathemind.git
-cd breathemind
+1. **Clone the repository**
+   ```
+   git clone https://github.com/yourusername/breathemind.git
+   cd breathemind
+   ```
+
+2. **Install dependencies**
+   ```
+   npm install
+   # or
+   yarn install
+   ```
+
+3. **Run the app**
+   ```
+   npm start
+   # or
+   yarn start
+   ```
+
+4. **Build for production**
+   ```
+   npm run build
+   ```
+
+---
+
+## 📸 Screenshots
+
+| Mode Selection | Session Timer |
+|----------------|----------------|
+| <img width="316" height="658" alt="Mode Selection" src="https://github.com/user-attachments/assets/441fdf39-f5bf-4132-8d41-874434dde02b" /> | <img width="288" height="271" alt="Session Timer" src="https://github.com/user-attachments/assets/7405a9ea-c19f-4a87-8e3c-93f3da304445" /> |
+
+
+---
+
+## 💡 Future Enhancements
+
+- Guided voice narration  
+- Breathing history & analytics  
+- Integration with Apple Health / Google Fit  
+- Ambient background sounds  
+
+---
+
+## 🧘‍♂️ License
+
+This project is licensed under the [MIT License](LICENSE).
+
+---
+
+## 👤 Author
+
+**Parkpoom Wisedsri (ภาคภูมิ วิเศษศรี)**  
+🌐 [GitHub Profile](https://github.com/yourusername)  
+📧 parkpoom.w@example.com *(optional)*  
+
+> Created with ❤️ to help people pause, breathe, and find calm in their day.
+
+---
+
+### 🌀 “Find your rhythm. One breath at a time.”

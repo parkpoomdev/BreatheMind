@@ -9,7 +9,7 @@ type PhaseSegmentsRingProps = {
 
 const COLORS = ["#60a5fa", "#f59e0b", "#f472b6", "#a855f7", "#22d3ee"];
 
-export function PhaseSegmentsRing({ ratios, progress, size = 180, strokeWidth = 12 }: PhaseSegmentsRingProps) {
+export function PhaseSegmentsRing({ ratios, progress, size = 180, strokeWidth = 16 }: PhaseSegmentsRingProps) {
   const segments = useMemo(() => {
     const valid = ratios.filter((value) => Number.isFinite(value) && value > 0);
     const total = valid.reduce((sum, value) => sum + value, 0);

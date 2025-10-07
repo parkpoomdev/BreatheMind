@@ -6,7 +6,10 @@ import {
   IonCardContent,
   IonContent,
   IonHeader,
+  IonIcon,
   IonItem,
+  IonMenu,
+  IonMenuToggle,
   IonModal,
   IonPage,
   IonSelect,
@@ -14,10 +17,12 @@ import {
   IonTitle,
   IonToolbar
 } from "@ionic/react";
+import { menuController } from "@ionic/core";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { ProgressRing } from "./components/ProgressRing";
 import { PhaseSegmentsRing } from "./components/PhaseSegmentsRing";
 import { usePhaseAudio } from "./hooks/usePhaseAudio";
+import { moonOutline, personCircleOutline, settingsOutline, sunnyOutline } from "ionicons/icons";
 
 type ModeOption = {
   value: string;
@@ -94,16 +99,18 @@ export default function App() {
   const [timeLeft, setTimeLeft] = useState<number>(minutes * 60);
   const [guide, setGuide] = useState<ModeOption | null>(null);
   const [showGuide, setShowGuide] = useState<boolean>(false);
+  const [theme, setTheme] = useState<"light" | "dark">("dark");
   const initialMountRef = useRef(true);
   const { playPhaseTone, resetAudio } = usePhaseAudio();
   const phaseIndexRef = useRef<number | null>(null);
 
-  useEffect(() => {
-    if (isRunning) {
-      return;
-    }
+  const previousMinutesRef = useRef(minutes);
 
-    setTimeLeft(minutes * 60);
+  useEffect(() => {
+    if (!isRunning && previousMinutesRef.current !== minutes) {
+      setTimeLeft(minutes * 60);
+    }
+    previousMinutesRef.current = minutes;
   }, [minutes, isRunning]);
 
   useEffect(() => {
@@ -215,80 +222,121 @@ export default function App() {
     }
   }, [cycleProgress, cycleUnitTotal, isRunning, phaseRatios, playPhaseTone, resetAudio]);
 
+  useEffect(() => {
+    if (typeof document !== "undefined") {
+      document.body.dataset.theme = theme;
+    }
+  }, [theme]);
+
+  const themeIcon = theme === "dark" ? sunnyOutline : moonOutline;
+  const themeLabel = theme === "dark" ? "Light mode" : "Dark mode";
+  const toggleTheme = () => setTheme((prev) => (prev === "dark" ? "light" : "dark"));
+  const openConfigMenu = () => {
+    menuController.open("config-menu").catch(() => {});
+  };
+
   return (
     <IonApp>
       <IonPage>
-        <IonContent fullscreen className="app-content">
-          <div className="session-wrapper">
-            <IonCard className="session-card">
-              <IonCardContent>
-                <IonItem lines="none" className="mode-select">
-                  <IonSelect
-                    label="Breathwork category"
-                    labelPlacement="stacked"
-                    value={mode}
-                    interface="popover"
-                    onIonChange={(event) => {
-                      const next = event.detail.value as string | undefined;
-                      if (typeof next === "string") {
-                        setMode(next);
-                      }
-                    }}
-                  >
-                    {MODE_OPTIONS.map((option) => (
-                      <IonSelectOption key={option.value} value={option.value}>
-                        {`${option.name} (${option.pattern})`}
-                      </IonSelectOption>
-                    ))}
-                  </IonSelect>
-                </IonItem>
-
-                <div className="time-grid">
-                  {PRESET_TIMES.map((value) => {
-                    const active = minutes === value;
-                    return (
-                      <button
-                        type="button"
-                        key={value}
-                        className={`time-chip ${active ? "time-chip--active" : ""}`}
-                        onClick={() => handleTimeSelect(value)}
-                      >
-                        {value}
-                      </button>
-                    );
-                  })}
-                  <button type="button" className="time-chip" onClick={handleIncrement}>
-                    +5
-                  </button>
+        <IonMenu side="start" menuId="config-menu" contentId="main-content" swipeGesture>
+          <IonContent className={`menu-content ${theme}`}>
+            <div className="menu-shell">
+              <div className="menu-user">
+                <IonIcon icon={personCircleOutline} className="menu-user__icon" />
+                <div>
+                  <div className="menu-user__name">Mindful Guest</div>
+                  <div className="menu-user__status">Ready to breathe</div>
                 </div>
+              </div>
+              <div className="menu-actions">
+                <button type="button" className="menu-action" onClick={toggleTheme}>
+                  <IonIcon icon={themeIcon} className="menu-action__icon" />
+                  <span>{themeLabel}</span>
+                </button>
+                <IonMenuToggle autoHide>
+                  <button type="button" className="menu-action secondary">
+                    <IonIcon icon={settingsOutline} className="menu-action__icon" />
+                    <span>Session configuration</span>
+                  </button>
+                </IonMenuToggle>
+              </div>
+            </div>
+          </IonContent>
+        </IonMenu>
 
-                <div className="timer-block" role="status" aria-live="polite">
-                  <div className="status-text">{statusText}</div>
-                  <div className="progress-shell">
-                    <ProgressRing progress={progress} />
-                    <PhaseSegmentsRing ratios={phaseRatios} progress={cycleProgress} />
-                    <div className="progress-overlay">
-                      <span className="overlay-pattern">{activePattern}</span>
-                      <strong className="overlay-timer">{formatTime(timeLeft)}</strong>
+        <IonContent id="main-content" fullscreen className={`app-content ${theme}`}>
+          <div className="app-shell">
+            <div className="session-wrapper">
+              <IonCard className="session-card">
+                <IonCardContent>
+                  <IonItem lines="none" className="mode-select">
+                    <IonSelect
+                      label="Breathwork category"
+                      labelPlacement="stacked"
+                      value={mode}
+                      interface="popover"
+                      onIonChange={(event) => {
+                        const next = event.detail.value as string | undefined;
+                        if (typeof next === "string") {
+                          setMode(next);
+                        }
+                      }}
+                    >
+                      {MODE_OPTIONS.map((option) => (
+                        <IonSelectOption key={option.value} value={option.value}>
+                          {`${option.name} (${option.pattern})`}
+                        </IonSelectOption>
+                      ))}
+                    </IonSelect>
+                  </IonItem>
+
+                  <div className="time-grid">
+                    {PRESET_TIMES.map((value) => {
+                      const active = minutes === value;
+                      return (
+                        <button
+                          type="button"
+                          key={value}
+                          className={`time-chip ${active ? "time-chip--active" : ""}`}
+                          onClick={() => handleTimeSelect(value)}
+                        >
+                          {value}
+                        </button>
+                      );
+                    })}
+                    <button type="button" className="time-chip" onClick={handleIncrement}>
+                      +5
+                    </button>
+                  </div>
+
+                  <div className="timer-block" role="status" aria-live="polite">
+                    <div className="status-text">{statusText}</div>
+                    <div className="progress-shell">
+                      <ProgressRing progress={progress} />
+                      <PhaseSegmentsRing ratios={phaseRatios} progress={cycleProgress} />
+                      <div className="progress-overlay">
+                        <span className="overlay-pattern">{activePattern}</span>
+                        <strong className="overlay-timer">{formatTime(timeLeft)}</strong>
+                      </div>
                     </div>
                   </div>
-                </div>
 
-                <div className="control-actions">
-                  <IonButton expand="block" shape="round" className="action-primary" onClick={handleStartPause}>
-                    {isRunning ? "Pause" : "Start"}
-                  </IonButton>
-                  <div className="control-divider" aria-hidden="true">
-                    <span>|</span>
+                  <div className="control-actions">
+                    <IonButton expand="block" shape="round" className="action-primary" onClick={handleStartPause}>
+                      {isRunning ? "Pause" : "Start"}
+                    </IonButton>
+                    <div className="control-divider" aria-hidden="true">
+                      <span>|</span>
+                    </div>
+                    <IonButton expand="block" fill="outline" shape="round" className="action-reset" onClick={handleReset}>
+                      Reset
+                    </IonButton>
                   </div>
-                  <IonButton expand="block" fill="outline" shape="round" className="action-reset" onClick={handleReset}>
-                    Reset
-                  </IonButton>
-                </div>
-              </IonCardContent>
-            </IonCard>
+                </IonCardContent>
+              </IonCard>
 
-            <p className="footer-note">Add custom ratios, audio cues, or haptics once the timing feels right.</p>
+              <p className="footer-note">Add custom ratios, audio cues, or haptics once the timing feels right.</p>
+            </div>
           </div>
         </IonContent>
 

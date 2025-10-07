@@ -17,6 +17,7 @@ import {
 import { useEffect, useMemo, useRef, useState } from "react";
 import { ProgressRing } from "./components/ProgressRing";
 import { PhaseSegmentsRing } from "./components/PhaseSegmentsRing";
+import { usePhaseAudio } from "./hooks/usePhaseAudio";
 
 type ModeOption = {
   value: string;
@@ -94,6 +95,8 @@ export default function App() {
   const [guide, setGuide] = useState<ModeOption | null>(null);
   const [showGuide, setShowGuide] = useState<boolean>(false);
   const initialMountRef = useRef(true);
+  const { playPhaseTone, resetAudio } = usePhaseAudio();
+  const phaseIndexRef = useRef<number | null>(null);
 
   useEffect(() => {
     if (isRunning) {
@@ -180,6 +183,37 @@ export default function App() {
       setShowGuide(true);
     }
   }, [mode]);
+
+  useEffect(() => {
+    phaseIndexRef.current = null;
+  }, [phaseRatios]);
+
+  useEffect(() => {
+    if (!isRunning) {
+      phaseIndexRef.current = null;
+      resetAudio();
+      return;
+    }
+    if (!phaseRatios.length || cycleUnitTotal <= 0) {
+      return;
+    }
+    const total = cycleUnitTotal;
+    const safeRatios = phaseRatios.map((value) => (value > 0 ? value : 0));
+    const cumulative: number[] = [];
+    let acc = 0;
+    safeRatios.forEach((value) => {
+      acc += value;
+      cumulative.push(acc / total);
+    });
+
+    const currentIdx = cumulative.findIndex((end) => cycleProgress < end);
+    const index = currentIdx === -1 ? safeRatios.length - 1 : currentIdx;
+
+    if (phaseIndexRef.current === null || phaseIndexRef.current !== index) {
+      playPhaseTone(index);
+      phaseIndexRef.current = index;
+    }
+  }, [cycleProgress, cycleUnitTotal, isRunning, phaseRatios, playPhaseTone, resetAudio]);
 
   return (
     <IonApp>
